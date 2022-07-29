@@ -17,6 +17,7 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.GridView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -94,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
             HttpClient httpClient = new HttpClient();
             ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-            // TODO: send http request with the files in the files array
+            // send http request with the files in the files array
             for(String path: allFiles) {
                 executorService.execute(() -> {
                     try {
@@ -105,6 +106,8 @@ public class MainActivity extends AppCompatActivity {
                         String response = httpClient.postRequest(url, uploadFileDTO.convertToJson());
                         if(response.contains("true")) {
                             runOnUiThread(() -> {
+                                allFiles.clear();
+                                files.setAdapter(new FileAdapter(MainActivity.this, R.layout.file_item, allFiles));
                                 Toast.makeText(MainActivity.this, "Files has been uploaded successfully", Toast.LENGTH_SHORT).show();
                             });
                         }
