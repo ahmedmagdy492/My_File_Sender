@@ -2,6 +2,7 @@ package com.magdyradwan.my_file_sender;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.content.res.AppCompatResources;
@@ -12,11 +13,16 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton btnSend;
     private FloatingActionButton btnAdd;
     private FloatingActionButton btnMenu;
+    private ImageView image_overlay;
     private boolean clicked = false;
     private ArrayList<String> allFiles = new ArrayList<>();
 
@@ -48,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
             new ActivityResultContracts.GetContent(),
             result ->{
                 if(result != null) {
+                    image_overlay.setVisibility(View.GONE);
                     allFiles.add(result.toString());
                     files.setAdapter(new FileAdapter(this, R.layout.file_item, allFiles));
                 }
@@ -63,6 +71,15 @@ public class MainActivity extends AppCompatActivity {
         btnMenu = findViewById(R.id.menu);
         btnSend = findViewById(R.id.btnSend);
         btnAdd = findViewById(R.id.upload_file);
+        image_overlay = findViewById(R.id.image_overlay);
+
+        files.setOnItemClickListener((parent, view, position, id) -> {
+            allFiles.remove(position);
+            files.setAdapter(new FileAdapter(this, R.layout.file_item, allFiles));
+            if(allFiles.size() == 0) {
+                image_overlay.setVisibility(View.VISIBLE);
+            }
+        });
 
         btnMenu.setOnClickListener(v -> {
             setVisiablity(clicked);
@@ -92,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         IntentResult result = IntentIntegrator.parseActivityResult(resultCode, data);
         if(result.getContents() != null) {
             String url = result.getContents();
+
             HttpClient httpClient = new HttpClient();
             ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -106,12 +124,15 @@ public class MainActivity extends AppCompatActivity {
                         String response = httpClient.postRequest(url, uploadFileDTO.convertToJson());
                         if(response.contains("true")) {
                             runOnUiThread(() -> {
-                                allFiles.clear();
+                                allFiles.remove(path);
                                 files.setAdapter(new FileAdapter(MainActivity.this, R.layout.file_item, allFiles));
-                                Toast.makeText(MainActivity.this, "Files has been uploaded successfully", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "File has been uploaded successfully", Toast.LENGTH_SHORT).show();
+                                if(allFiles.size() == 0) {
+                                    image_overlay.setVisibility(View.VISIBLE);
+                                }
                             });
                         }
-                    } 
+                    }
                     catch (IOException e) {
                         runOnUiThread(() -> {
                             Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -144,5 +165,21 @@ public class MainActivity extends AppCompatActivity {
 
         intentIntegrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
         intentIntegrator.initiateScan();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if(item.getItemId() == R.id.clear_all) {
+            allFiles.clear();
+            files.setAdapter(new FileAdapter(this, R.layout.file_item, allFiles));
+            image_overlay.setVisibility(View.VISIBLE);
+        }
+        return true;
     }
 }
